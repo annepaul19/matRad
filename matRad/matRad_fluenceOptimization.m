@@ -177,6 +177,17 @@ switch pln.propOpt.quantityOpt
 
     case 'BED'
         backProjection = matRad_BEDProjection;
+
+    case 'multiModelEffect'
+        backProjection = matRad_MultiModelEffectProjection();
+
+        % Assign
+        backProjection.bioModel = pln.bioModel;
+        backProjection.alphaX   = pln.propOpt.alphaX;
+        backProjection.betaX   = pln.propOpt.betaX;
+        % backProjection.bioModel = pln.bioModel;
+        % Parameters
+
     otherwise
         warning(['Did not recognize biological setting ''' pln.propOpt.quantityOpt '''!\nUsing physical dose optimization!']);
         backProjection = matRad_DoseProjection;
