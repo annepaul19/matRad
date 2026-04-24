@@ -28,7 +28,7 @@ classdef matRad_MultiModelEffectProjection < matRad_BackProjection
     end
     
     methods
-        function effect = computeSingleScenario(~,dij,scen,w)
+        function RBExD = computeSingleScenario(obj,pD, LET, alphaX, betaX)
             % Need:
                 % physical dose distribution (dij.physicalDose{scen}*w);
                 % let distribution (dij.mLETDose{scen}*w); % -> ! This is LET * dose
@@ -42,11 +42,25 @@ classdef matRad_MultiModelEffectProjection < matRad_BackProjection
                 
                 % Then effect and RBExDose
 
+                bixel.vABratio = alphaX/betaX;
+                bixel.LET = LET;
+
+                [RBEmin, RBEmax] = obj.bioModel.getRBEminMax(bixel);
+
+                alphaDose    = RBEmax .* alphaX .* pD;
+                sqrtBetaDose = RBEmin .* sqrt(betaX) .* pD;
+
+                effect  = alphaDose + sqrtBetaDose.^2;
+
+                gamma = alphaX/(2*betaX);
+                RBExD = sqrt(effect/betaX + gamma^2) - gamma;
+
         end
         
-        function wGrad = projectSingleScenarioGradient(~,dij,doseGrad,scen,w)
+        function wGrad = projectSingleScenarioGradient(~,w)
             % Need to figure out the derivative of RBExD wrt w (can check
             % the VariableRBEProjection) and compute it through the model
+            wGrad = ones(size(w));
             
         end
         
@@ -63,32 +77,44 @@ classdef matRad_MultiModelEffectProjection < matRad_BackProjection
         end
 
          function d = computeResult(obj,dij,w)
-             nPhysicalScenarios = numel(obj.scenarios);
+
+             physicalScenarios = find(~cellfun(@isempty,dij.physicalDose(:,:,:)))';
              nBioScenarios      = numel(obj.alphaX);
 
 
-             % loop over phzsical scenarios
+             % loop over physical scenarios
                 % compute dose and LEt distribution
                 % Loop over alphaX/betaX
                     % computeSingleScenario
+             scenCounter = 0;
+             for physScenIdx=physicalScenarios
+                physicalDose = dij.physicalDose{physScenIdx}*w;
 
+                nonZeroIdx = physicalDose ~= 0;
+                LET = zeros(size(physicalDose));
+                LET(nonZeroIdx) = dij.mLETDose{physScenIdx}(nonZeroIdx,:) * w ./ physicalDose(nonZeroIdx);
 
+                for bioIdx=1:nBioScenarios
+                    scenCounter = scenCounter +1;
+                    d{scenCounter} = obj.computeSingleScenario(physicalDose, LET, obj.alphaX(bioIdx), obj.betaX(bioIdx));
+                end
+             end
 
-
-             % d = cell(nPhysicalScenarios * nBioScenarios,1);
-             % d = arrayfun(@(scen) computeSingleScenario(obj,dij,scen,w),obj.scenarios,'UniformOutput',false);
-
-             % Extract the bio scenarios from d
-
-            % d = cell(size(dij.physicalDose));
-            % d(obj.scenarios) = arrayfun(@(scen) computeSingleScenario(obj,dij,scen,w),obj.scenarios,'UniformOutput',false);
          end
 
          function wGrad = projectGradient(obj,dij,doseGrad,w)
-             nPhysicalScenarios = numel(obj.scenarios);
+             physicalScenarios = find(~cellfun(@isempty,dij.physicalDose(:,:,:)))';
              nBioScenarios      = numel(obj.alphaX);
 
-             wGrad = arrayfun(@(scen) projectSingleScenarioGradient(obj,dij,doseGrad,scen,w),obj.scenarios,'UniformOutput',false);
+             scenCounter = 0;
+             for physScenIdx=physicalScenarios
+                
+                for bioIdx=1:nBioScenarios
+                    scenCounter = scenCounter +1;
+                    wGrad{scenCounter} = obj.projectSingleScenarioGradient(w);
+                end
+             end
+             % wGrad = arrayfun(@(scen) projectSingleScenarioGradient(obj,dij,doseGrad,scen,w),obj.scenarios,'UniformOutput',false);
 
               % Extract the bio scenarios from wGrad
 

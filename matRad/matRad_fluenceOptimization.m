@@ -184,7 +184,7 @@ switch pln.propOpt.quantityOpt
         % Assign
         backProjection.bioModel = pln.bioModel;
         backProjection.alphaX   = pln.propOpt.alphaX;
-        backProjection.betaX   = pln.propOpt.betaX;
+        backProjection.betaX    = pln.propOpt.betaX;
         % backProjection.bioModel = pln.bioModel;
         % Parameters
 
@@ -363,13 +363,23 @@ end
 if ~FLAG_ROB_OPT || FLAG_CALC_PROB     % if multiple robust objectives are defined for one structure then remove FLAG_CALC_PROB from the if clause
     ixForOpt = scen4D;
 else
-    ixForOpt = linIxDIJ;
+    if isa(backProjection, 'matRad_MultiModelEffectProjection')
+         nPhysicalScenarios = numel(linIxDIJ);
+         nBioScenarios      = numel(backProjection.alphaX);
+
+         ixForOpt = [1:nBioScenarios*nPhysicalScenarios];
+         scenProb = 1/(nBioScenarios*nPhysicalScenarios)*ones(numel(ixForOpt),1);
+
+    else
+        ixForOpt = linIxDIJ;
+        scenProb = pln.multScen.scenProb;
+    end
 end
 
 
 %Give scenarios used for optimization
 backProjection.scenarios    = ixForOpt;
-backProjection.scenarioProb = pln.multScen.scenProb;
+backProjection.scenarioProb = scenProb;
 backProjection.nominalCtScenarios = linIxDIJ_nominalCT;
 %backProjection.scenDim      = pln.multScen
 

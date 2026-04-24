@@ -53,9 +53,10 @@ fullScen      = cell(ndims(d),1);
 [fullScen{:}] = ind2sub(size(d),useScen);
 contourScen   = fullScen{1};
 
-doseGradient          = cell(size(dij.physicalDose));
-doseGradient(useScen) = {zeros(dij.doseGrid.numOfVoxels,1)};
+% doseGradient          = cell(size(dij.physicalDose));
+% doseGradient(useScen) = {zeros(dij.doseGrid.numOfVoxels,1)};
 
+doseGradient(optiProb.BP.scenarios) = {zeros(dij.doseGrid.numOfVoxels,1)};
 %For probabilistic optimization
 vOmega = 0;
 
